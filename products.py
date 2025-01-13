@@ -1,6 +1,5 @@
 class Product:
     def __init__(self, name: str, price: float, quantity: int):
-        # Validate inputs
         if not name:
             raise ValueError("Name cannot be empty.")
         if price < 0:
@@ -34,7 +33,8 @@ class Product:
         self.active = False
 
     def show(self) -> str:
-        return f"Product: {self.name}, Price: ${self.price:.2f}, Quantity: {self.quantity}, Active: {self.active}"
+        return (f"Product: {self.name}, Price: ${self.price:.2f}, "
+                f"Quantity: {self.quantity}, Active: {self.active}")
 
     def buy(self, quantity: int) -> float:
         if quantity <= 0:
@@ -47,3 +47,39 @@ class Product:
         total_price = self.price * quantity
         self.set_quantity(self.quantity - quantity)
         return total_price
+
+
+class NonStockedProduct(Product):
+    def __init__(self, name: str, price: float):
+        super().__init__(name, price, quantity=0)
+        self.active = True
+
+    def set_quantity(self, quantity: int):
+        raise Exception("Cannot set quantity for non-stocked products.")
+
+    def show(self) -> str:
+        return (f"Non-Stocked Product: {self.name}, Price: ${self.price:.2f}, "
+                f"Active: {self.active}")
+
+    def buy(self, quantity: int) -> float:
+        if quantity <= 0:
+            raise ValueError("Purchase quantity must be positive.")
+        if not self.active:
+            raise Exception("Product is not active.")
+
+        return self.price * quantity
+
+
+class LimitedProduct(Product):
+    def __init__(self, name: str, price: float, quantity: int, max_per_order: int):
+        super().__init__(name, price, quantity)
+        self.max_per_order = max_per_order
+
+    def buy(self, quantity: int) -> float:
+        if quantity > self.max_per_order:
+            raise Exception(f"Cannot buy more than {self.max_per_order} of {self.name} in one order.")
+        return super().buy(quantity)
+
+    def show(self) -> str:
+        return (f"Limited Product: {self.name}, Price: ${self.price:.2f}, "
+                f"Quantity: {self.quantity}, Max per Order: {self.max_per_order}, Active: {self.active}")
