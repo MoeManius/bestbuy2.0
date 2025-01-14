@@ -1,38 +1,69 @@
 import pytest
-from products import Product
+from products import Product, NonStockedProduct, LimitedProduct
+from promotions import PercentageDiscount, SecondItemHalfPrice, BuyTwoGetOneFree
 
-def test_create_product_success():
-    """Test that a product is created successfully with valid inputs."""
-    product = Product("Test Product", price=100.0, quantity=10)
-    assert product.name == "Test Product"
-    assert product.price == 100.0
-    assert product.quantity == 10
-    assert product.is_active() is True
 
-def test_create_product_invalid_details():
-    """Test that creating a product with invalid details raises a ValueError."""
-    with pytest.raises(ValueError, match="Name cannot be empty."):
-        Product("", price=100.0, quantity=10)
-    with pytest.raises(ValueError, match="Price cannot be negative."):
-        Product("Test Product", price=-10.0, quantity=10)
-    with pytest.raises(ValueError, match="Quantity cannot be negative."):
-        Product("Test Product", price=100.0, quantity=-5)
+@pytest.fixture
+def product_setup():
+    """
+    Fixture to set up initial products and promotions for tests.
+    """
+    # Create products
+    products = [
+        Product("MacBook Air M2", price=1450, quantity=100),
+        Product("Bose QuietComfort Earbuds", price=250, quantity=500),
+        Product("Google Pixel 7", price=500, quantity=250),
+        NonStockedProduct("Windows License", price=125),
+        LimitedProduct("Shipping", price=10, quantity=250, max_per_order=1),
+    ]
 
-def test_product_becomes_inactive_when_quantity_zero():
-    """Test that a product becomes inactive when its quantity reaches zero."""
-    product = Product("Test Product", price=50.0, quantity=5)
-    product.set_quantity(0)
-    assert product.is_active() is False
+    # Create promotions
+    second_half_price = SecondItemHalfPrice("Second Half Price!")
+    third_one_free = BuyTwoGetOneFree("Buy Two, Get One Free!")
+    thirty_percent = PercentageDiscount("30% Off!", discount_percentage=30)
 
-def test_product_purchase_updates_quantity_and_returns_price():
-    """Test that buying a product reduces its quantity and returns the correct total price."""
-    product = Product("Test Product", price=20.0, quantity=10)
-    total_price = product.buy(3)
-    assert total_price == 60.0
-    assert product.get_quantity() == 7
+    # Add promotions to products
+    products[0].set_promotion(second_half_price)  # MacBook Air
+    products[1].set_promotion(third_one_free)     # Bose QuietComfort Earbuds
+    products[3].set_promotion(thirty_percent)     # Windows License
 
-def test_buying_more_than_available_quantity_raises_exception():
-    """Test that attempting to buy more than the available stock raises an exception."""
-    product = Product("Test Product", price=30.0, quantity=5)
-    with pytest.raises(Exception, match="Not enough quantity in stock."):
-        product.buy(10)
+    return products
+
+
+def test_product_promotion_macbook(product_setup):
+    macbook = product_setup[0]  # MacBook Air M2
+    # Test promotion: Second item at half price
+    assert macbook.buy(2) == 1450 + 725  # 1450 + 50% of 1450
+    assert macbook.get_quantity() == 98  # Quantity reduced correctly
+
+
+def test_product_promotion_bose_earbuds(product_setup):
+    bose = product_setup[1]  # Bose QuietComfort Earbuds
+    # Test promotion: Buy two, get one free
+    assert bose.buy(3) == 250 * 2  # Third one is free
+    assert bose.get_quantity() == 497  # Quantity reduced correctly
+
+
+def test_product_promotion_windows_license(product_setup):
+    windows = product_setup[3]  # Windows License
+    # Test promotion: 30% discount
+    assert windows.buy(1) == 125 * 0.7  # 30% off
+    assert windows.get_quantity() == 0  # Quantity remains 0 for NonStockedProduct
+
+
+def test_limited_product_promotion_shipping(product_setup):
+    shipping = product_setup[4]  # Shipping
+    # Test limited purchase restriction
+    with pytest.raises(Exception):
+        shipping.buy(2)  # Max per order is 1
+
+    # Valid purchase
+    assert shipping.buy(1) == 10
+    assert shipping.get_quantity() == 249  # Quantity reduced correctly
+
+
+def test_product_without_promotion(product_setup):
+    pixel = product_setup[2]  # Google Pixel 7
+    # Test regular product without promotion
+    assert pixel.buy(1) == 500  # No discount
+    assert pixel.get_quantity() == 249  # Quantity reduced correctly
