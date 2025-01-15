@@ -1,139 +1,106 @@
-from typing import Optional
 from promotions import Promotion
 
 
 class Product:
-    """
-    Represents a generic product with basic properties such as name, price, quantity, and active status.
-    """
-
     def __init__(self, name: str, price: float, quantity: int):
-        """Initialize a product with name, price, and quantity."""
-        if not name:
-            raise ValueError("Name cannot be empty.")
-        if price < 0:
-            raise ValueError("Price cannot be negative.")
-        if quantity < 0:
-            raise ValueError("Quantity cannot be negative.")
+        if not name or price <= 0 or quantity < 0:
+            raise ValueError("Invalid product details")
+        self._name = name
+        self._price = price
+        self._quantity = quantity
+        self._promotion = None
 
-        self.name = name
-        self.price = price
-        self.quantity = quantity
-        self.active = True
-        self.promotion: Optional[Promotion] = None  # Promotion instance variable
+    @property
+    def name(self):
+        return self._name
 
-    def set_promotion(self, promotion: "Promotion"):
-        """Set a promotion for the product."""
-        self.promotion = promotion
+    @property
+    def price(self):
+        return self._price
 
-    def get_promotion(self) -> Optional["Promotion"]:
-        """Get the current promotion for the product."""
-        return self.promotion
+    @property
+    def quantity(self):
+        return self._quantity
 
-    def get_quantity(self) -> int:
-        """Return the quantity of the product."""
-        return self.quantity
+    @property
+    def promotion(self):
+        return self._promotion
 
-    def set_quantity(self, quantity: int):
-        """Set the quantity of the product and deactivate if it reaches zero."""
-        if quantity < 0:
-            raise ValueError("Quantity cannot be negative.")
-        self.quantity = quantity
-        if self.quantity == 0:
-            self.deactivate()
+    @promotion.setter
+    def promotion(self, promo: Promotion):
+        self._promotion = promo
 
-    def is_active(self) -> bool:
-        """Check if the product is active."""
-        return self.active
-
-    def activate(self):
-        """Activate the product."""
-        self.active = True
-
-    def deactivate(self):
-        """Deactivate the product."""
-        self.active = False
-
-    def show(self) -> str:
-        """Return a string representation of the product."""
-        promotion_desc = f", Promotion: {self.promotion}" if self.promotion else ""
-        return f"Product: {self.name}, Price: ${self.price:.2f}, Quantity: {self.quantity}, Active: {self.active}{promotion_desc}"
+    @property
+    def is_active(self):
+        return self._quantity > 0
 
     def buy(self, quantity: int) -> float:
-        """
-        Process a purchase for a given quantity of the product.
-        :param quantity: The quantity to purchase.
-        :return: The total price for the quantity purchased.
-        """
         if quantity <= 0:
-            raise ValueError("Purchase quantity must be positive.")
-        if not self.active:
-            raise Exception("Product is not active.")
-        if quantity > self.quantity:
-            raise Exception("Not enough quantity in stock.")
+            raise ValueError("Quantity must be greater than zero")
+        if quantity > self._quantity:
+            raise Exception("Not enough quantity in stock")
 
-        # Apply promotion if available
-        if self.promotion:
-            total_price = self.promotion.apply_promotion(self, quantity)
-        else:
-            total_price = self.price * quantity
+        self._quantity -= quantity
+        if self._promotion:
+            return self._promotion.apply_promotion(self, quantity)
+        return self._price * quantity
 
-        # Deduct quantity and return price
-        self.set_quantity(self.quantity - quantity)
-        return total_price
+    def __str__(self):
+        promo_info = f" (Promotion: {self._promotion.name})" if self._promotion else ""
+        return f"{self._name}, Price: {self._price}, Quantity: {self._quantity}{promo_info}"
+
+    def __lt__(self, other):
+        if not isinstance(other, Product):
+            return NotImplemented
+        return self._price < other.price
+
+    def __gt__(self, other):
+        if not isinstance(other, Product):
+            return NotImplemented
+        return self._price > other.price
 
 
 class NonStockedProduct(Product):
-    """Represents a product that is not physically stocked."""
-
     def __init__(self, name: str, price: float):
-        """Initialize a non-stocked product with zero quantity."""
         super().__init__(name, price, quantity=0)
 
-    def set_quantity(self, quantity: int):
-        """Override to prevent setting a quantity for non-stocked products."""
-        raise Exception("Cannot set quantity for non-stocked products.")
+    @property
+    def quantity(self):
+        return 0  # Always zero for non-stocked products
 
     def buy(self, quantity: int) -> float:
-        """
-        Process a purchase for a non-stocked product.
-        :param quantity: The quantity to purchase.
-        :return: The total price for the quantity purchased.
-        """
         if quantity <= 0:
-            raise ValueError("Purchase quantity must be positive.")
-        if not self.active:
-            raise Exception("Product is not active.")
-        # Use promotion or standard price
-        if self.promotion:
-            return self.promotion.apply_promotion(self, quantity)
-        return self.price * quantity
+            raise ValueError("Quantity must be greater than zero")
+        if self._promotion:
+            return self._promotion.apply_promotion(self, quantity)
+        return self._price * quantity
 
-    def show(self) -> str:
-        """Override to include special description for non-stocked products."""
-        return f"Non-Stocked Product: {self.name}, Price: ${self.price:.2f}"
+    def __str__(self):
+        promo_info = f" (Promotion: {self._promotion.name})" if self._promotion else ""
+        return f"{self._name} (Non-Stocked), Price: {self._price}{promo_info}"
 
 
 class LimitedProduct(Product):
-    """Represents a product with a maximum quantity allowed per order."""
-
     def __init__(self, name: str, price: float, quantity: int, max_per_order: int):
-        """Initialize a limited product with a maximum quantity per order."""
         super().__init__(name, price, quantity)
-        if max_per_order <= 0:
-            raise ValueError("Maximum per order must be greater than zero.")
-        self.max_per_order = max_per_order
+        self._max_per_order = max_per_order
+
+    @property
+    def max_per_order(self):
+        return self._max_per_order
 
     def buy(self, quantity: int) -> float:
-        """
-        Process a purchase for a limited product.
-        :param quantity: The quantity to purchase.
-        :return: The total price for the quantity purchased.
-        """
-        if quantity > self.max_per_order:
-            raise Exception(f"Cannot buy more than {self.max_per_order} of this product per order.")
-        return super().buy(quantity)
+        if quantity <= 0:
+            raise ValueError("Quantity must be greater than zero")
+        if quantity > self._max_per_order:
+            raise Exception(f"Cannot buy more than {self._max_per_order} per order")
+        if quantity > self._quantity:
+            raise Exception("Not enough quantity in stock")
+        self._quantity -= quantity
+        if self._promotion:
+            return self._promotion.apply_promotion(self, quantity)
+        return self._price * quantity
 
-    def show(self) -> str:
-        """Override to include special description for limited products."""
-        return f"Limited Product: {self.name}, Price: ${self.price:.2f}, Max per Order: {self.max_per_order}"
+    def __str__(self):
+        promo_info = f" (Promotion: {self._promotion.name})" if self._promotion else ""
+        return f"{self._name} (Limited to {self._max_per_order} per order), Price: {self._price}, Quantity: {self._quantity}{promo_info}"
