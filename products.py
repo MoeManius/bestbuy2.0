@@ -2,7 +2,19 @@ from promotions import Promotion
 
 
 class Product:
+    """
+    Represents a product in the store.
+    """
+
     def __init__(self, name: str, price: float, quantity: int):
+        """
+        Initialize the product.
+
+        Args:
+            name (str): The name of the product.
+            price (float): The price of the product.
+            quantity (int): The quantity of the product in stock.
+        """
         if not name or price <= 0 or quantity < 0:
             raise ValueError("Invalid product details")
         self._name = name
@@ -35,6 +47,15 @@ class Product:
         return self._quantity > 0
 
     def buy(self, quantity: int) -> float:
+        """
+        Buy a certain quantity of the product.
+
+        Args:
+            quantity (int): The quantity of the product to buy.
+
+        Returns:
+            float: The total price after applying any promotions.
+        """
         if quantity <= 0:
             raise ValueError("Quantity must be greater than zero")
         if quantity > self._quantity:
@@ -61,7 +82,18 @@ class Product:
 
 
 class NonStockedProduct(Product):
+    """
+    Represents a non-stocked product.
+    """
+
     def __init__(self, name: str, price: float):
+        """
+        Initialize a non-stocked product.
+
+        Args:
+            name (str): The name of the product.
+            price (float): The price of the product.
+        """
         super().__init__(name, price, quantity=0)
 
     @property
@@ -69,6 +101,15 @@ class NonStockedProduct(Product):
         return 0  # Always zero for non-stocked products
 
     def buy(self, quantity: int) -> float:
+        """
+        Buy a certain quantity of the product.
+
+        Args:
+            quantity (int): The quantity of the product to buy.
+
+        Returns:
+            float: The total price after applying any promotions.
+        """
         if quantity <= 0:
             raise ValueError("Quantity must be greater than zero")
         if self._promotion:
@@ -81,7 +122,20 @@ class NonStockedProduct(Product):
 
 
 class LimitedProduct(Product):
+    """
+    Represents a limited-quantity product.
+    """
+
     def __init__(self, name: str, price: float, quantity: int, max_per_order: int):
+        """
+        Initialize a limited-quantity product.
+
+        Args:
+            name (str): The name of the product.
+            price (float): The price of the product.
+            quantity (int): The quantity of the product in stock.
+            max_per_order (int): The maximum quantity that can be bought per order.
+        """
         super().__init__(name, price, quantity)
         self._max_per_order = max_per_order
 
@@ -90,6 +144,15 @@ class LimitedProduct(Product):
         return self._max_per_order
 
     def buy(self, quantity: int) -> float:
+        """
+        Buy a certain quantity of the product.
+
+        Args:
+            quantity (int): The quantity of the product to buy.
+
+        Returns:
+            float: The total price after applying any promotions.
+        """
         if quantity <= 0:
             raise ValueError("Quantity must be greater than zero")
         if quantity > self._max_per_order:

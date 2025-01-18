@@ -6,6 +6,7 @@ from promotions import PercentageDiscount, SecondItemHalfPrice, BuyTwoGetOneFree
 def setup_store() -> Store:
     """
     Setup the initial store inventory and assign promotions to products.
+
     Returns:
         Store: The initialized store instance.
     """

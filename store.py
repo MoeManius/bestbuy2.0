@@ -8,6 +8,9 @@ class Store:
     """
 
     def __init__(self):
+        """
+        Initialize the store.
+        """
         self.products: List[Product] = []
 
     def add_product(self, product: Product):
